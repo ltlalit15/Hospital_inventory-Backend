@@ -59,8 +59,7 @@ const getInventory = async (req, res) => {
        LEFT JOIN facilities f ON i.facility_id = f.id
        WHERE ${whereClause}
        ORDER BY i.created_at DESC
-       LIMIT ? OFFSET ?`,
-      [...queryParams, parseInt(limit), parseInt(offset)]
+    
     );
 
     const total = countResult[0].total;
