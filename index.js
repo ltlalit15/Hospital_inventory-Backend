@@ -27,12 +27,35 @@ const PORT = process.env.PORT || 3000;
 app.set('trust proxy', 1);
 
 app.use(helmet());
+// app.use(cors({
+//   origin: process.env.NODE_ENV === 'production' ? 
+//     ['https://yourdomain.com'] : 
+//     ['http://localhost:3000', 'http://localhost:5173','https://hospital-inventory-management.netlify.app'],
+//   credentials: true
+// }));
+
+
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:5173',
+  'https://hospital-inventory-management.netlify.app',
+  'https://yourdomain.com'
+];
+
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' ? 
-    ['https://yourdomain.com'] : 
-    ['http://localhost:3000', 'http://localhost:5173','https://hospital-inventory-management.netlify.app'],
+  origin: (origin, callback) => {
+    // allow requests with no origin (like mobile apps, curl, Postman)
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error(`Not allowed by CORS: ${origin}`));
+    }
+  },
   credentials: true
 }));
+
 
 // Rate limiting
 const limiter = rateLimit({
