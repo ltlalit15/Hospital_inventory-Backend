@@ -348,11 +348,69 @@ const getFacilityStats = async (req, res) => {
   }
 };
 
+
+
+const assignFacilityAdmin = async (req, res) => {
+  try {
+    const { facility_id } = req.params;
+    const { admin_user_id } = req.body;
+
+    if (!admin_user_id) {
+      return res.status(400).json({
+        success: false,
+        message: 'Admin user_id is required'
+      });
+    }
+
+    const [users] = await pool.execute(
+      'SELECT id, role, status FROM users WHERE id = ? LIMIT 1',
+      [admin_user_id]
+    );
+
+    if (users.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'User with this id does not exist'
+      });
+    }
+
+    const user = users[0];
+
+    // // Update user role & facility
+    // await pool.execute(
+    //   'UPDATE users SET role = "facility_admin", facility_id = ? WHERE id = ?',
+    //   [facility_id, user.id]
+    // );
+
+    // Update facilities table using assigned_to
+    await pool.execute(
+      'UPDATE facilities SET assigned_to = ?, updated_at = NOW() WHERE id = ?',
+      [user.id, facility_id]
+    );
+
+    res.json({
+      success: true,
+      message: `Admin with ID '${user.id}' assigned successfully`
+    });
+  } catch (error) {
+    console.error('Assign facility admin error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to assign admin',
+      error: error.message
+    });
+  }
+};
+
+
+
+
 module.exports = {
   getFacilities,
   getFacilityById,
   createFacility,
   updateFacility,
   deleteFacility,
-  getFacilityStats
+  getFacilityStats,
+  assignFacilityAdmin
 };
