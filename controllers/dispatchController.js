@@ -1,26 +1,127 @@
 const { pool } = require('../config');
 
 // Get dispatches
+// const getDispatches = async (req, res) => {
+//   try {
+//     const { 
+//       page = 1, 
+//       limit = 10, 
+//       status, 
+//       facility_id,
+//       date_from,
+//       date_to
+//     } = req.query;
+
+//     const offset = (page - 1) * limit;
+//     let whereConditions = ['1=1'];
+//     let queryParams = [];
+
+//     // Role-based access control
+//     // if (req.user.role === 'facility_admin') {
+//     //   whereConditions.push('d.facility_id = ?');
+//     //   queryParams.push(req.user.facility_id);
+//     // }
+
+//     // Apply filters
+//     if (status) {
+//       whereConditions.push('d.status = ?');
+//       queryParams.push(status);
+//     }
+
+//     // if (facility_id && req.user.role !== 'facility_admin') {
+//     //   whereConditions.push('d.facility_id = ?');
+//     //   queryParams.push(facility_id);
+//     // }
+
+//     if (date_from) {
+//       whereConditions.push('DATE(d.created_at) >= ?');
+//       queryParams.push(date_from);
+//     }
+
+//     if (date_to) {
+//       whereConditions.push('DATE(d.created_at) <= ?');
+//       queryParams.push(date_to);
+//     }
+
+//     const whereClause = whereConditions.join(' AND ');
+
+//     // Get total count
+//     const [countResult] = await pool.execute(
+//       `SELECT COUNT(*) as total FROM dispatches d WHERE ${whereClause}`,
+//       queryParams
+//     );
+
+//     // Get dispatches with details
+//     const [dispatches] = await pool.execute(
+//       `SELECT d.*, 
+//               f.name as facility_name, f.location as facility_location,
+//               u1.name as dispatched_by_name,
+//               u2.name as received_by_name,
+//               r.id as requisition_id, r.priority as requisition_priority,
+//               (SELECT COUNT(*) FROM requisition_items WHERE requisition_id = r.id) as item_count
+//        FROM dispatches d
+//        LEFT JOIN facilities f ON d.facility_id = f.id
+//        LEFT JOIN users u1 ON d.dispatched_by = u1.id
+//        LEFT JOIN users u2 ON d.received_by = u2.id
+//        LEFT JOIN requisitions r ON d.requisition_id = r.id
+//        WHERE ${whereClause}
+//        ORDER BY d.created_at DESC
+//        LIMIT ? OFFSET ?`,
+//       [...queryParams, parseInt(limit), parseInt(offset)]
+//     );
+
+//     // Get items for each dispatch
+//     for (let dispatch of dispatches) {
+//       if (dispatch.requisition_id) {
+//         const [items] = await pool.execute(
+//           `SELECT ri.*, i.item_name, i.item_code, i.unit
+//            FROM requisition_items ri
+//            LEFT JOIN inventory i ON ri.item_id = i.id
+//            WHERE ri.requisition_id = ?`,
+//           [dispatch.requisition_id]
+//         );
+//         dispatch.items = items;
+//       }
+//     }
+
+//     const total = countResult[0].total;
+//     const totalPages = Math.ceil(total / limit);
+
+//     res.json({
+//       success: true,
+//       data: {
+//         dispatches,
+//         pagination: {
+//           currentPage: parseInt(page),
+//           totalPages,
+//           totalItems: total,
+//           itemsPerPage: parseInt(limit)
+//         }
+//       }
+//     });
+//   } catch (error) {
+//     console.error('Get dispatches error:', error);
+//     res.status(500).json({
+//       success: false,
+//       message: 'Failed to get dispatches',
+//       error: error.message
+//     });
+//   }
+// };
+
+
+
 const getDispatches = async (req, res) => {
   try {
     const { 
-      page = 1, 
-      limit = 10, 
       status, 
       facility_id,
       date_from,
       date_to
     } = req.query;
 
-    const offset = (page - 1) * limit;
     let whereConditions = ['1=1'];
     let queryParams = [];
-
-    // Role-based access control
-    // if (req.user.role === 'facility_admin') {
-    //   whereConditions.push('d.facility_id = ?');
-    //   queryParams.push(req.user.facility_id);
-    // }
 
     // Apply filters
     if (status) {
@@ -28,10 +129,10 @@ const getDispatches = async (req, res) => {
       queryParams.push(status);
     }
 
-    // if (facility_id && req.user.role !== 'facility_admin') {
-    //   whereConditions.push('d.facility_id = ?');
-    //   queryParams.push(facility_id);
-    // }
+    if (facility_id) {
+      whereConditions.push('d.facility_id = ?');
+      queryParams.push(facility_id);
+    }
 
     if (date_from) {
       whereConditions.push('DATE(d.created_at) >= ?');
@@ -45,13 +146,7 @@ const getDispatches = async (req, res) => {
 
     const whereClause = whereConditions.join(' AND ');
 
-    // Get total count
-    const [countResult] = await pool.execute(
-      `SELECT COUNT(*) as total FROM dispatches d WHERE ${whereClause}`,
-      queryParams
-    );
-
-    // Get dispatches with details
+    // Get dispatches with details (no pagination)
     const [dispatches] = await pool.execute(
       `SELECT d.*, 
               f.name as facility_name, f.location as facility_location,
@@ -65,9 +160,8 @@ const getDispatches = async (req, res) => {
        LEFT JOIN users u2 ON d.received_by = u2.id
        LEFT JOIN requisitions r ON d.requisition_id = r.id
        WHERE ${whereClause}
-       ORDER BY d.created_at DESC
-       LIMIT ? OFFSET ?`,
-      [...queryParams, parseInt(limit), parseInt(offset)]
+       ORDER BY d.created_at DESC`,
+      queryParams
     );
 
     // Get items for each dispatch
@@ -84,20 +178,9 @@ const getDispatches = async (req, res) => {
       }
     }
 
-    const total = countResult[0].total;
-    const totalPages = Math.ceil(total / limit);
-
     res.json({
       success: true,
-      data: {
-        dispatches,
-        pagination: {
-          currentPage: parseInt(page),
-          totalPages,
-          totalItems: total,
-          itemsPerPage: parseInt(limit)
-        }
-      }
+      data: dispatches
     });
   } catch (error) {
     console.error('Get dispatches error:', error);
@@ -108,6 +191,7 @@ const getDispatches = async (req, res) => {
     });
   }
 };
+
 
 // Get dispatch by ID
 const getDispatchById = async (req, res) => {
