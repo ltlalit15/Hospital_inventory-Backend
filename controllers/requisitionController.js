@@ -1,31 +1,132 @@
 const { pool } = require('../config');
 
 // Get requisitions
+// const getRequisitions = async (req, res) => {
+//   try {
+//     const { 
+//       page = 1, 
+//       limit = 10, 
+//       status, 
+//       facility_id, 
+//       user_id,
+//       priority,
+//       date_from,
+//       date_to
+//     } = req.query;
+
+//     const offset = (page - 1) * limit;
+//     let whereConditions = ['1=1'];
+//     let queryParams = [];
+
+//     // Role-based access control
+//     // if (req.user.role === 'facility_admin') {
+//     //   whereConditions.push('r.facility_id = ?');
+//     //   queryParams.push(req.user.facility_id);
+//     // } else if (req.user.role === 'facility_user') {
+//     //   whereConditions.push('r.user_id = ?');
+//     //   queryParams.push(req.user.id);
+//     // }
+
+//     // Apply filters
+//     if (status) {
+//       whereConditions.push('r.status = ?');
+//       queryParams.push(status);
+//     }
+
+//     if (facility_id && req.user.role === 'super_admin') {
+//       whereConditions.push('r.facility_id = ?');
+//       queryParams.push(facility_id);
+//     }
+
+//     if (user_id && (req.user.role === 'super_admin' || req.user.role === 'facility_admin')) {
+//       whereConditions.push('r.user_id = ?');
+//       queryParams.push(user_id);
+//     }
+
+//     if (priority) {
+//       whereConditions.push('r.priority = ?');
+//       queryParams.push(priority);
+//     }
+
+//     if (date_from) {
+//       whereConditions.push('DATE(r.created_at) >= ?');
+//       queryParams.push(date_from);
+//     }
+
+//     if (date_to) {
+//       whereConditions.push('DATE(r.created_at) <= ?');
+//       queryParams.push(date_to);
+//     }
+
+//     const whereClause = whereConditions.join(' AND ');
+
+//     // Get total count
+//     const [countResult] = await pool.execute(
+//       `SELECT COUNT(*) as total FROM requisitions r WHERE ${whereClause}`,
+//       queryParams
+//     );
+
+//     // Get requisitions with details
+//     const [requisitions] = await pool.execute(
+//       `SELECT r.*, 
+//               u.name as user_name, u.email as user_email,
+//               f.name as facility_name, f.location as facility_location,
+//               (SELECT COUNT(*) FROM requisition_items WHERE requisition_id = r.id) as item_count,
+//               (SELECT SUM(quantity) FROM requisition_items WHERE requisition_id = r.id) as total_quantity
+//        FROM requisitions r
+//        LEFT JOIN users u ON r.user_id = u.id
+//        LEFT JOIN facilities f ON r.facility_id = f.id
+//        WHERE ${whereClause}
+//        ORDER BY r.created_at DESC
+//        LIMIT ? OFFSET ?`,
+//       [...queryParams, parseInt(limit), parseInt(offset)]
+//     );
+
+//     // Get items for each requisition
+//     for (let requisition of requisitions) {
+//       const [items] = await pool.execute(
+//         `SELECT ri.*, i.item_name, i.item_code, i.unit
+//          FROM requisition_items ri
+//          LEFT JOIN inventory i ON ri.item_id = i.id
+//          WHERE ri.requisition_id = ?`,
+//         [requisition.id]
+//       );
+//       requisition.items = items;
+//     }
+
+//     const total = countResult[0].total;
+//     const totalPages = Math.ceil(total / limit);
+
+//     res.json({
+//       success: true,
+//       data: {
+//         requisitions,
+//         pagination: {
+//           currentPage: parseInt(page),
+//           totalPages,
+//           totalItems: total,
+//           itemsPerPage: parseInt(limit)
+//         }
+//       }
+//     });
+//   } catch (error) {
+//     console.error('Get requisitions error:', error);
+//     res.status(500).json({
+//       success: false,
+//       message: 'Failed to get requisitions',
+//       error: error.message
+//     });
+//   }
+// };
+
+
+
 const getRequisitions = async (req, res) => {
   try {
-    const { 
-      page = 1, 
-      limit = 10, 
-      status, 
-      facility_id, 
-      user_id,
-      priority,
-      date_from,
-      date_to
-    } = req.query;
+    const { status, facility_id, search } = req.query;
 
-    const offset = (page - 1) * limit;
     let whereConditions = ['1=1'];
     let queryParams = [];
-
-    // Role-based access control
-    // if (req.user.role === 'facility_admin') {
-    //   whereConditions.push('r.facility_id = ?');
-    //   queryParams.push(req.user.facility_id);
-    // } else if (req.user.role === 'facility_user') {
-    //   whereConditions.push('r.user_id = ?');
-    //   queryParams.push(req.user.id);
-    // }
 
     // Apply filters
     if (status) {
@@ -33,81 +134,36 @@ const getRequisitions = async (req, res) => {
       queryParams.push(status);
     }
 
-    if (facility_id && req.user.role === 'super_admin') {
+    if (facility_id) {
       whereConditions.push('r.facility_id = ?');
       queryParams.push(facility_id);
     }
 
-    if (user_id && (req.user.role === 'super_admin' || req.user.role === 'facility_admin')) {
-      whereConditions.push('r.user_id = ?');
-      queryParams.push(user_id);
-    }
-
-    if (priority) {
-      whereConditions.push('r.priority = ?');
-      queryParams.push(priority);
-    }
-
-    if (date_from) {
-      whereConditions.push('DATE(r.created_at) >= ?');
-      queryParams.push(date_from);
-    }
-
-    if (date_to) {
-      whereConditions.push('DATE(r.created_at) <= ?');
-      queryParams.push(date_to);
+    if (search) {
+      whereConditions.push('(r.notes LIKE ? OR u.name LIKE ?)');
+      queryParams.push(`%${search}%`, `%${search}%`);
     }
 
     const whereClause = whereConditions.join(' AND ');
 
-    // Get total count
-    const [countResult] = await pool.execute(
-      `SELECT COUNT(*) as total FROM requisitions r WHERE ${whereClause}`,
-      queryParams
-    );
-
-    // Get requisitions with details
+    // Get requisitions
     const [requisitions] = await pool.execute(
       `SELECT r.*, 
-              u.name as user_name, u.email as user_email,
-              f.name as facility_name, f.location as facility_location,
-              (SELECT COUNT(*) FROM requisition_items WHERE requisition_id = r.id) as item_count,
-              (SELECT SUM(quantity) FROM requisition_items WHERE requisition_id = r.id) as total_quantity
+              u.name AS user_name, 
+              u.email AS user_email, 
+              f.name AS facility_name, 
+              f.location AS facility_location
        FROM requisitions r
        LEFT JOIN users u ON r.user_id = u.id
        LEFT JOIN facilities f ON r.facility_id = f.id
        WHERE ${whereClause}
-       ORDER BY r.created_at DESC
-       LIMIT ? OFFSET ?`,
-      [...queryParams, parseInt(limit), parseInt(offset)]
+       ORDER BY r.created_at DESC`,
+      queryParams
     );
-
-    // Get items for each requisition
-    for (let requisition of requisitions) {
-      const [items] = await pool.execute(
-        `SELECT ri.*, i.item_name, i.item_code, i.unit
-         FROM requisition_items ri
-         LEFT JOIN inventory i ON ri.item_id = i.id
-         WHERE ri.requisition_id = ?`,
-        [requisition.id]
-      );
-      requisition.items = items;
-    }
-
-    const total = countResult[0].total;
-    const totalPages = Math.ceil(total / limit);
 
     res.json({
       success: true,
-      data: {
-        requisitions,
-        pagination: {
-          currentPage: parseInt(page),
-          totalPages,
-          totalItems: total,
-          itemsPerPage: parseInt(limit)
-        }
-      }
+      data: requisitions
     });
   } catch (error) {
     console.error('Get requisitions error:', error);
@@ -118,6 +174,7 @@ const getRequisitions = async (req, res) => {
     });
   }
 };
+
 
 // Get requisition by ID
 const getRequisitionById = async (req, res) => {
