@@ -5,16 +5,13 @@ const { pool } = require('../config');
 
 const getInventory = async (req, res) => {
   try {
-    const {
-      page = 1,
-      limit = 10,
-      category,
-      facility_id,
+    const { 
+      category, 
+      facility_id, 
       search,
-      low_stock = false
+      low_stock = false 
     } = req.query;
 
-    const offset = (page - 1) * limit;
     let whereConditions = ['1=1'];
     let queryParams = [];
 
@@ -40,14 +37,6 @@ const getInventory = async (req, res) => {
 
     const whereClause = whereConditions.join(' AND ');
 
-    // Get total count
-    const [countResult] = await pool.execute(
-      `SELECT COUNT(*) as total 
-       FROM inventory i 
-       WHERE ${whereClause}`,
-      queryParams
-    );
-
     // Get inventory items
     const [items] = await pool.execute(
       `SELECT i.*, 
@@ -57,25 +46,13 @@ const getInventory = async (req, res) => {
        FROM inventory i
        LEFT JOIN facilities f ON i.facility_id = f.id
        WHERE ${whereClause}
-       ORDER BY i.created_at DESC
-       LIMIT ? OFFSET ?`,
-      [...queryParams, Number(limit), Number(offset)]
+       ORDER BY i.created_at DESC`,
+      queryParams
     );
-
-    const total = countResult[0].total;
-    const totalPages = Math.ceil(total / limit);
 
     res.json({
       success: true,
-      data: {
-        items,
-        pagination: {
-          currentPage: Number(page),
-          totalPages,
-          totalItems: total,
-          itemsPerPage: Number(limit)
-        }
-      }
+      data: items
     });
   } catch (error) {
     console.error('Get inventory error:', error);
@@ -86,6 +63,9 @@ const getInventory = async (req, res) => {
     });
   }
 };
+
+
+
 
 
 
