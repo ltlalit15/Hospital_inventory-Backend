@@ -383,11 +383,18 @@ const assignFacilityAdmin = async (req, res) => {
     // );
 
     // Update facilities table using assigned_to
-    await pool.execute(
-      'UPDATE facilities SET assigned_to = ?, updated_at = NOW() WHERE id = ?',
-      [user.id, facility_id]
-    );
+    // await pool.execute(
+    //   'UPDATE facilities SET assigned_to = ?, updated_at = NOW() WHERE id = ?',
+    //   [user.id, facility_id]
+    // );
 
+
+    await pool.execute(
+  'UPDATE facilities SET admin_user_id = ?, updated_at = NOW() WHERE id = ?',
+  [user.id, facility_id]
+);
+
+    
     res.json({
       success: true,
       message: `Admin with ID '${user.id}' assigned successfully`
