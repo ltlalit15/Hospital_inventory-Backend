@@ -556,6 +556,62 @@ const approveRequisition = async (req, res) => {
 
 
 
+// const rejectRequisition = async (req, res) => {
+//   const connection = await pool.getConnection();
+
+//   try {
+//     await connection.beginTransaction();
+
+//     const { id } = req.params;
+//     const { remarks } = req.body;
+
+//     // Get requisition details
+//     const [requisitions] = await connection.execute(
+//       'SELECT status FROM requisitions WHERE id = ?',
+//       [id]
+//     );
+
+//     if (requisitions.length === 0) {
+//       return res.status(404).json({
+//         success: false,
+//         message: 'Requisition not found'
+//       });
+//     }
+
+//     if (requisitions[0].status !== 'pending') {
+//       return res.status(400).json({
+//         success: false,
+//         message: 'Only pending requisitions can be rejected'
+//       });
+//     }
+
+//     // Update requisition status to rejected
+//     await connection.execute(
+//       'UPDATE requisitions SET status = "rejected", approved_by = ?, approved_at = NOW(), remarks = ? WHERE id = ?',
+//       [req.user.id, remarks || 'Rejected by approver', id]
+//     );
+
+//     await connection.commit();
+
+//     res.json({
+//       success: true,
+//       message: 'Requisition rejected successfully'
+//     });
+//   } catch (error) {
+//     await connection.rollback();
+//     console.error('Reject requisition error:', error);
+//     res.status(500).json({
+//       success: false,
+//       message: 'Failed to reject requisition',
+//       error: error.message
+//     });
+//   } finally {
+//     connection.release();
+//   }
+// };
+
+
+// Reject requisition
 const rejectRequisition = async (req, res) => {
   const connection = await pool.getConnection();
 
@@ -563,7 +619,14 @@ const rejectRequisition = async (req, res) => {
     await connection.beginTransaction();
 
     const { id } = req.params;
-    const { remarks } = req.body;
+    const { remarks, userId } = req.body; // frontend should send userId
+
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'User ID is required'
+      });
+    }
 
     // Get requisition details
     const [requisitions] = await connection.execute(
@@ -587,8 +650,8 @@ const rejectRequisition = async (req, res) => {
 
     // Update requisition status to rejected
     await connection.execute(
-      'UPDATE requisitions SET status = "rejected", approved_by = ?, approved_at = NOW(), remarks = ? WHERE id = ?',
-      [req.user.id, remarks || 'Rejected by approver', id]
+      'UPDATE requisitions SET status = "rejected", rejected_by = ?, rejected_at = NOW(), remarks = ? WHERE id = ?',
+      [userId, remarks || null, id]
     );
 
     await connection.commit();
@@ -597,6 +660,7 @@ const rejectRequisition = async (req, res) => {
       success: true,
       message: 'Requisition rejected successfully'
     });
+
   } catch (error) {
     await connection.rollback();
     console.error('Reject requisition error:', error);
@@ -609,6 +673,7 @@ const rejectRequisition = async (req, res) => {
     connection.release();
   }
 };
+
 
 
 // Deliver requisition (facility admin)
