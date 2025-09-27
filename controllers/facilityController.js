@@ -5,15 +5,86 @@ const { pool } = require('../config');
 
 
 
+// const getFacilities = async (req, res) => {
+//   try {
+//     const { page = 1, limit = 10, status = 'active', search } = req.query;
+//     const offset = (page - 1) * limit;
+
+//     let whereConditions = ['1=1'];
+//     let queryParams = [];
+
+//     // ✅ Apply filters (specify table alias)
+//     if (status) {
+//       whereConditions.push('f.status = ?');
+//       queryParams.push(status);
+//     }
+
+//     if (search) {
+//       whereConditions.push('(f.name LIKE ? OR f.location LIKE ?)');
+//       queryParams.push(`%${search}%`, `%${search}%`);
+//     }
+
+//     const whereClause = whereConditions.join(' AND ');
+
+//     // ✅ Get total count
+//     const [countResult] = await pool.execute(
+//       `SELECT COUNT(*) as total 
+//        FROM facilities f
+//        WHERE ${whereClause}`,
+//       queryParams
+//     );
+
+//     // ✅ Get facilities with admin info
+//     const [facilities] = await pool.execute(
+//       `SELECT f.*, 
+//               u.name as admin_name, u.email as admin_email,
+//               (SELECT COUNT(*) FROM users WHERE facility_id = f.id AND status = 'active') as user_count,
+//               (SELECT COUNT(*) FROM inventory WHERE facility_id = f.id) as inventory_count
+//        FROM facilities f
+//        LEFT JOIN users u 
+//          ON f.id = u.facility_id 
+//         AND u.role = 'facility_admin' 
+//         AND u.status = 'active'
+//        WHERE ${whereClause}
+//        ORDER BY f.created_at DESC
+//        LIMIT ? OFFSET ?`,
+//       [...queryParams, parseInt(limit), parseInt(offset)]
+//     );
+
+//     const total = countResult[0].total;
+//     const totalPages = Math.ceil(total / limit);
+
+//     res.json({
+//       success: true,
+//       data: {
+//         facilities,
+//         pagination: {
+//           currentPage: parseInt(page),
+//           totalPages,
+//           totalItems: total,
+//           itemsPerPage: parseInt(limit)
+//         }
+//       }
+//     });
+//   } catch (error) {
+//     console.error('Get facilities error:', error);
+//     res.status(500).json({
+//       success: false,
+//       message: 'Failed to get facilities',
+//       error: error.message
+//     });
+//   }
+// };
+
+
 const getFacilities = async (req, res) => {
   try {
-    const { page = 1, limit = 10, status = 'active', search } = req.query;
-    const offset = (page - 1) * limit;
+    const { status = 'active', search } = req.query;
 
     let whereConditions = ['1=1'];
     let queryParams = [];
 
-    // ✅ Apply filters (specify table alias)
+    // Apply filters
     if (status) {
       whereConditions.push('f.status = ?');
       queryParams.push(status);
@@ -26,15 +97,7 @@ const getFacilities = async (req, res) => {
 
     const whereClause = whereConditions.join(' AND ');
 
-    // ✅ Get total count
-    const [countResult] = await pool.execute(
-      `SELECT COUNT(*) as total 
-       FROM facilities f
-       WHERE ${whereClause}`,
-      queryParams
-    );
-
-    // ✅ Get facilities with admin info
+    // Get facilities with admin info (no pagination)
     const [facilities] = await pool.execute(
       `SELECT f.*, 
               u.name as admin_name, u.email as admin_email,
@@ -46,25 +109,13 @@ const getFacilities = async (req, res) => {
         AND u.role = 'facility_admin' 
         AND u.status = 'active'
        WHERE ${whereClause}
-       ORDER BY f.created_at DESC
-       LIMIT ? OFFSET ?`,
-      [...queryParams, parseInt(limit), parseInt(offset)]
+       ORDER BY f.created_at DESC`,
+      queryParams
     );
-
-    const total = countResult[0].total;
-    const totalPages = Math.ceil(total / limit);
 
     res.json({
       success: true,
-      data: {
-        facilities,
-        pagination: {
-          currentPage: parseInt(page),
-          totalPages,
-          totalItems: total,
-          itemsPerPage: parseInt(limit)
-        }
-      }
+      data: facilities
     });
   } catch (error) {
     console.error('Get facilities error:', error);
@@ -75,6 +126,7 @@ const getFacilities = async (req, res) => {
     });
   }
 };
+
 
 
 
