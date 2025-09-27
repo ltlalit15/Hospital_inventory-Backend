@@ -2,29 +2,105 @@ const bcrypt = require('bcryptjs');
 const { pool } = require('../config');
 
 // Get all users (with filtering and pagination)
+// const getUsers = async (req, res) => {
+//   try {
+//     const { 
+//       page = 1, 
+//       limit = 10, 
+//       role, 
+//       facility_id, 
+//       status = 'active',
+//       search 
+//     } = req.query;
+
+//     const offset = (page - 1) * limit;
+//     let whereConditions = ['1=1'];
+//     let queryParams = [];
+
+//     // Role-based access control
+//     // if (req.user.role === 'facility_admin') {
+//     //   whereConditions.push('u.facility_id = ?');
+//     //   queryParams.push(req.user.facility_id);
+//     // } else if (req.user.role === 'facility_user') {
+//     //   whereConditions.push('u.facility_id = ? AND u.id = ?');
+//     //   queryParams.push(req.user.facility_id, req.user.id);
+//     // }
+
+//     // Apply filters
+//     if (role) {
+//       whereConditions.push('u.role = ?');
+//       queryParams.push(role);
+//     }
+
+//     if (facility_id && req.user.role === 'super_admin') {
+//       whereConditions.push('u.facility_id = ?');
+//       queryParams.push(facility_id);
+//     }
+
+//     if (status) {
+//       whereConditions.push('u.status = ?');
+//       queryParams.push(status);
+//     }
+
+//     if (search) {
+//       whereConditions.push('(u.name LIKE ? OR u.email LIKE ?)');
+//       queryParams.push(`%${search}%`, `%${search}%`);
+//     }
+
+//     const whereClause = whereConditions.join(' AND ');
+
+//     // Get total count
+//     const [countResult] = await pool.execute(
+//       `SELECT COUNT(*) as total FROM users u WHERE ${whereClause}`,
+//       queryParams
+//     );
+
+//     // Get users
+//     const [users] = await pool.execute(
+//       `SELECT u.id, u.name, u.email, u.role, u.facility_id, u.phone, u.department, u.status, u.created_at, u.last_login,
+//               f.name as facility_name, f.location as facility_location
+//        FROM users u
+//        LEFT JOIN facilities f ON u.facility_id = f.id
+//        WHERE ${whereClause}
+//        ORDER BY u.created_at DESC
+//        LIMIT ? OFFSET ?`,
+//       [...queryParams, parseInt(limit), parseInt(offset)]
+//     );
+
+//     const total = countResult[0].total;
+//     const totalPages = Math.ceil(total / limit);
+
+//     res.json({
+//       success: true,
+//       data: {
+//         users,
+//         pagination: {
+//           currentPage: parseInt(page),
+//           totalPages,
+//           totalItems: total,
+//           itemsPerPage: parseInt(limit)
+//         }
+//       }
+//     });
+//   } catch (error) {
+//     console.error('Get users error:', error);
+//     res.status(500).json({
+//       success: false,
+//       message: 'Failed to get users',
+//       error: error.message
+//     });
+//   }
+// };
+
+
+
+
 const getUsers = async (req, res) => {
   try {
-    const { 
-      page = 1, 
-      limit = 10, 
-      role, 
-      facility_id, 
-      status = 'active',
-      search 
-    } = req.query;
+    const { role, facility_id, status = 'active', search } = req.query;
 
-    const offset = (page - 1) * limit;
-    let whereConditions = ['1=1'];
+    let whereConditions = [];
     let queryParams = [];
-
-    // Role-based access control
-    // if (req.user.role === 'facility_admin') {
-    //   whereConditions.push('u.facility_id = ?');
-    //   queryParams.push(req.user.facility_id);
-    // } else if (req.user.role === 'facility_user') {
-    //   whereConditions.push('u.facility_id = ? AND u.id = ?');
-    //   queryParams.push(req.user.facility_id, req.user.id);
-    // }
 
     // Apply filters
     if (role) {
@@ -32,7 +108,7 @@ const getUsers = async (req, res) => {
       queryParams.push(role);
     }
 
-    if (facility_id && req.user.role === 'super_admin') {
+    if (facility_id) {
       whereConditions.push('u.facility_id = ?');
       queryParams.push(facility_id);
     }
@@ -44,43 +120,28 @@ const getUsers = async (req, res) => {
 
     if (search) {
       whereConditions.push('(u.name LIKE ? OR u.email LIKE ?)');
-      queryParams.push(`%${search}%`, `%${search}%`);
+      queryParams.push(`%${search}%`);
+      queryParams.push(`%${search}%`);
     }
 
-    const whereClause = whereConditions.join(' AND ');
+    // Build WHERE clause
+    const whereClause = whereConditions.length > 0 ? whereConditions.join(' AND ') : '1=1';
 
-    // Get total count
-    const [countResult] = await pool.execute(
-      `SELECT COUNT(*) as total FROM users u WHERE ${whereClause}`,
-      queryParams
-    );
-
-    // Get users
+    // ✅ Get users (no LIMIT, no OFFSET)
     const [users] = await pool.execute(
-      `SELECT u.id, u.name, u.email, u.role, u.facility_id, u.phone, u.department, u.status, u.created_at, u.last_login,
+      `SELECT u.id, u.name, u.email, u.role, u.facility_id, u.phone, u.department, 
+              u.status, u.created_at, u.last_login,
               f.name as facility_name, f.location as facility_location
        FROM users u
        LEFT JOIN facilities f ON u.facility_id = f.id
        WHERE ${whereClause}
-       ORDER BY u.created_at DESC
-       LIMIT ? OFFSET ?`,
-      [...queryParams, parseInt(limit), parseInt(offset)]
+       ORDER BY u.created_at DESC`,
+      queryParams
     );
-
-    const total = countResult[0].total;
-    const totalPages = Math.ceil(total / limit);
 
     res.json({
       success: true,
-      data: {
-        users,
-        pagination: {
-          currentPage: parseInt(page),
-          totalPages,
-          totalItems: total,
-          itemsPerPage: parseInt(limit)
-        }
-      }
+      data: users
     });
   } catch (error) {
     console.error('Get users error:', error);
@@ -91,6 +152,9 @@ const getUsers = async (req, res) => {
     });
   }
 };
+
+
+
 
 // Get user by ID
 const getUserById = async (req, res) => {
