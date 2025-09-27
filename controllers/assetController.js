@@ -1,11 +1,108 @@
 const { pool, cloudinary } = require('../config');
 
 // Get assets
+// const getAssets = async (req, res) => {
+//   try {
+//     const { 
+//       page = 1, 
+//       limit = 10, 
+//       type, 
+//       facility_id, 
+//       status = 'active',
+//       assigned_to,
+//       search 
+//     } = req.query;
+
+//     const offset = (page - 1) * limit;
+//     let whereConditions = ['1=1'];
+//     let queryParams = [];
+
+//     // Role-based access control
+//     // if (req.user.role === 'facility_admin' || req.user.role === 'facility_user') {
+//     //   whereConditions.push('a.facility_id = ?');
+//     //   queryParams.push(req.user.facility_id);
+//     // } else if (req.user.role === 'warehouse_admin') {
+//     //   whereConditions.push('a.facility_id IS NULL'); // Warehouse assets
+//     // }
+
+//     // Apply filters
+//     if (type) {
+//       whereConditions.push('a.type = ?');
+//       queryParams.push(type);
+//     }
+
+//     // if (facility_id && req.user.role === 'super_admin') {
+//     //   whereConditions.push('a.facility_id = ?');
+//     //   queryParams.push(facility_id);
+//     // }
+
+//     if (status) {
+//       whereConditions.push('a.status = ?');
+//       queryParams.push(status);
+//     }
+
+//     if (assigned_to) {
+//       whereConditions.push('a.assigned_to = ?');
+//       queryParams.push(assigned_to);
+//     }
+
+//     if (search) {
+//       whereConditions.push('(a.name LIKE ? OR a.serial_number LIKE ? OR a.model LIKE ?)');
+//       queryParams.push(`%${search}%`, `%${search}%`, `%${search}%`);
+//     }
+
+//     const whereClause = whereConditions.join(' AND ');
+
+//     // Get total count
+//     const [countResult] = await pool.execute(
+//       `SELECT COUNT(*) as total FROM assets a WHERE ${whereClause}`,
+//       queryParams
+//     );
+
+//     // Get assets
+//     const [assets] = await pool.execute(
+//       `SELECT a.*, 
+//               f.name as facility_name, f.location as facility_location,
+//               u.name as assigned_to_name, u.email as assigned_to_email
+//        FROM assets a
+//        LEFT JOIN facilities f ON a.facility_id = f.id
+//        LEFT JOIN users u ON a.assigned_to = u.id
+//        WHERE ${whereClause}
+//        ORDER BY a.created_at DESC
+//        LIMIT ? OFFSET ?`,
+//       [...queryParams, parseInt(limit), parseInt(offset)]
+//     );
+
+//     const total = countResult[0].total;
+//     const totalPages = Math.ceil(total / limit);
+
+//     res.json({
+//       success: true,
+//       data: {
+//         assets,
+//         pagination: {
+//           currentPage: parseInt(page),
+//           totalPages,
+//           totalItems: total,
+//           itemsPerPage: parseInt(limit)
+//         }
+//       }
+//     });
+//   } catch (error) {
+//     console.error('Get assets error:', error);
+//     res.status(500).json({
+//       success: false,
+//       message: 'Failed to get assets',
+//       error: error.message
+//     });
+//   }
+// };
+
+
+
 const getAssets = async (req, res) => {
   try {
     const { 
-      page = 1, 
-      limit = 10, 
       type, 
       facility_id, 
       status = 'active',
@@ -13,17 +110,8 @@ const getAssets = async (req, res) => {
       search 
     } = req.query;
 
-    const offset = (page - 1) * limit;
     let whereConditions = ['1=1'];
     let queryParams = [];
-
-    // Role-based access control
-    // if (req.user.role === 'facility_admin' || req.user.role === 'facility_user') {
-    //   whereConditions.push('a.facility_id = ?');
-    //   queryParams.push(req.user.facility_id);
-    // } else if (req.user.role === 'warehouse_admin') {
-    //   whereConditions.push('a.facility_id IS NULL'); // Warehouse assets
-    // }
 
     // Apply filters
     if (type) {
@@ -31,10 +119,10 @@ const getAssets = async (req, res) => {
       queryParams.push(type);
     }
 
-    // if (facility_id && req.user.role === 'super_admin') {
-    //   whereConditions.push('a.facility_id = ?');
-    //   queryParams.push(facility_id);
-    // }
+    if (facility_id) {
+      whereConditions.push('a.facility_id = ?');
+      queryParams.push(facility_id);
+    }
 
     if (status) {
       whereConditions.push('a.status = ?');
@@ -53,13 +141,7 @@ const getAssets = async (req, res) => {
 
     const whereClause = whereConditions.join(' AND ');
 
-    // Get total count
-    const [countResult] = await pool.execute(
-      `SELECT COUNT(*) as total FROM assets a WHERE ${whereClause}`,
-      queryParams
-    );
-
-    // Get assets
+    // Get assets (no pagination)
     const [assets] = await pool.execute(
       `SELECT a.*, 
               f.name as facility_name, f.location as facility_location,
@@ -68,25 +150,13 @@ const getAssets = async (req, res) => {
        LEFT JOIN facilities f ON a.facility_id = f.id
        LEFT JOIN users u ON a.assigned_to = u.id
        WHERE ${whereClause}
-       ORDER BY a.created_at DESC
-       LIMIT ? OFFSET ?`,
-      [...queryParams, parseInt(limit), parseInt(offset)]
+       ORDER BY a.created_at DESC`,
+      queryParams
     );
-
-    const total = countResult[0].total;
-    const totalPages = Math.ceil(total / limit);
 
     res.json({
       success: true,
-      data: {
-        assets,
-        pagination: {
-          currentPage: parseInt(page),
-          totalPages,
-          totalItems: total,
-          itemsPerPage: parseInt(limit)
-        }
-      }
+      data: assets
     });
   } catch (error) {
     console.error('Get assets error:', error);
@@ -97,6 +167,7 @@ const getAssets = async (req, res) => {
     });
   }
 };
+
 
 // Get asset by ID
 const getAssetById = async (req, res) => {
