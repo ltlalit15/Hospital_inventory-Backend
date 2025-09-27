@@ -46,4 +46,5 @@ router.get('/user/:userId', getRequisitionsByUser);
 
 router.put('/requisitions/:id/reject', rejectRequisition);
 
+
 module.exports = router;
