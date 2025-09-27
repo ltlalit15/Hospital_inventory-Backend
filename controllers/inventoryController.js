@@ -1,37 +1,32 @@
 const { pool } = require('../config');
 
 // Get inventory items
+
+
 const getInventory = async (req, res) => {
   try {
-    const { 
-      page = 1, 
-      limit = 10, 
-      category, 
-      facility_id, 
+    const {
+      page = 1,
+      limit = 10,
+      category,
+      facility_id,
       search,
-      low_stock = false 
+      low_stock = false
     } = req.query;
 
     const offset = (page - 1) * limit;
     let whereConditions = ['1=1'];
     let queryParams = [];
 
-    // Role-based access control
-    // if (req.user.role === 'facility_admin' || req.user.role === 'facility_user') {
-    //   whereConditions.push('i.facility_id = ?');
-    //   queryParams.push(req.user.facility_id);
-    // } else if (facility_id && req.user.role !== 'super_admin') {
-    //   whereConditions.push('i.facility_id = ?');
-    //   queryParams.push(facility_id);
-    // } else if (facility_id) {
-    //   whereConditions.push('i.facility_id = ?');
-    //   queryParams.push(facility_id);
-    // }
-
     // Apply filters
     if (category) {
       whereConditions.push('i.category = ?');
       queryParams.push(category);
+    }
+
+    if (facility_id) {
+      whereConditions.push('i.facility_id = ?');
+      queryParams.push(facility_id);
     }
 
     if (search) {
@@ -47,22 +42,24 @@ const getInventory = async (req, res) => {
 
     // Get total count
     const [countResult] = await pool.execute(
-      `SELECT COUNT(*) as total FROM inventory i WHERE ${whereClause}`,
+      `SELECT COUNT(*) as total 
+       FROM inventory i 
+       WHERE ${whereClause}`,
       queryParams
     );
 
     // Get inventory items
     const [items] = await pool.execute(
-      `SELECT i.*, f.name as facility_name, f.location as facility_location,
+      `SELECT i.*, 
+              f.name as facility_name, 
+              f.location as facility_location,
               CASE WHEN i.quantity <= i.reorder_level THEN 1 ELSE 0 END as is_low_stock
        FROM inventory i
        LEFT JOIN facilities f ON i.facility_id = f.id
        WHERE ${whereClause}
        ORDER BY i.created_at DESC
        LIMIT ? OFFSET ?`,
-      [...queryParams, parseInt(limit), parseInt(offset)]
-       
-    
+      [...queryParams, Number(limit), Number(offset)]
     );
 
     const total = countResult[0].total;
@@ -73,10 +70,10 @@ const getInventory = async (req, res) => {
       data: {
         items,
         pagination: {
-          currentPage: parseInt(page),
+          currentPage: Number(page),
           totalPages,
           totalItems: total,
-          itemsPerPage: parseInt(limit)
+          itemsPerPage: Number(limit)
         }
       }
     });
@@ -89,6 +86,9 @@ const getInventory = async (req, res) => {
     });
   }
 };
+
+
+
 
 // Get inventory item by ID
 const getInventoryById = async (req, res) => {
