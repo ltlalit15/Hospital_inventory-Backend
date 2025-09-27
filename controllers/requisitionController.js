@@ -389,14 +389,103 @@ const updateRequisition = async (req, res) => {
 };
 
 // Approve requisition (warehouse admin)
+// const approveRequisition = async (req, res) => {
+//   const connection = await pool.getConnection();
+  
+//   try {
+//     await connection.beginTransaction();
+
+//     const { id } = req.params;
+//     const { items, remarks } = req.body; // items: [{ item_id, approved_quantity }]
+
+//     // Get requisition details
+//     const [requisitions] = await connection.execute(
+//       'SELECT facility_id, status FROM requisitions WHERE id = ?',
+//       [id]
+//     );
+
+//     if (requisitions.length === 0) {
+//       return res.status(404).json({
+//         success: false,
+//         message: 'Requisition not found'
+//       });
+//     }
+
+//     if (requisitions[0].status !== 'pending') {
+//       return res.status(400).json({
+//         success: false,
+//         message: 'Requisition is not in pending status'
+//       });
+//     }
+
+//     // Update requisition status
+//     await connection.execute(
+//       'UPDATE requisitions SET status = "approved", approved_by = ?, approved_at = NOW(), remarks = ? WHERE id = ?',
+//       [req.user.id, remarks || null, id]
+//     );
+
+//     // Update approved quantities for items
+//     for (const item of items) {
+//       await connection.execute(
+//         'UPDATE requisition_items SET approved_quantity = ? WHERE requisition_id = ? AND item_id = ?',
+//         [item.approved_quantity, id, item.item_id]
+//       );
+
+//       // Reduce warehouse stock (assuming warehouse has facility_id = null or specific warehouse facility)
+//       await connection.execute(
+//         'UPDATE inventory SET quantity = quantity - ? WHERE item_id = ? AND facility_id IS NULL',
+//         [item.approved_quantity, item.item_id]
+//       );
+//     }
+
+//     // Create dispatch record
+//     await connection.execute(
+//       `INSERT INTO dispatches (requisition_id, facility_id, status, dispatched_by, created_at) 
+//        VALUES (?, ?, 'in_transit', ?, NOW())`,
+//       [id, requisitions[0].facility_id, req.user.id]
+//     );
+
+//     await connection.commit();
+
+//     res.json({
+//       success: true,
+//       message: 'Requisition approved and dispatched successfully'
+//     });
+//   } catch (error) {
+//     await connection.rollback();
+//     console.error('Approve requisition error:', error);
+//     res.status(500).json({
+//       success: false,
+//       message: 'Failed to approve requisition',
+//       error: error.message
+//     });
+//   } finally {
+//     connection.release();
+//   }
+// };
+
 const approveRequisition = async (req, res) => {
   const connection = await pool.getConnection();
-  
+
   try {
     await connection.beginTransaction();
 
     const { id } = req.params;
-    const { items, remarks } = req.body; // items: [{ item_id, approved_quantity }]
+    const { items, remarks, userId } = req.body; // matched with frontend
+
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'User ID is required'
+      });
+    }
+
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'At least one item is required'
+      });
+    }
 
     // Get requisition details
     const [requisitions] = await connection.execute(
@@ -421,20 +510,21 @@ const approveRequisition = async (req, res) => {
     // Update requisition status
     await connection.execute(
       'UPDATE requisitions SET status = "approved", approved_by = ?, approved_at = NOW(), remarks = ? WHERE id = ?',
-      [req.user.id, remarks || null, id]
+      [userId, remarks || null, id]
     );
 
     // Update approved quantities for items
     for (const item of items) {
+      const approvedQty = item.approved_quantity ?? 0; // fallback to 0 if undefined
       await connection.execute(
         'UPDATE requisition_items SET approved_quantity = ? WHERE requisition_id = ? AND item_id = ?',
-        [item.approved_quantity, id, item.item_id]
+        [approvedQty, id, item.item_id]
       );
 
-      // Reduce warehouse stock (assuming warehouse has facility_id = null or specific warehouse facility)
+      // Reduce warehouse stock
       await connection.execute(
-        'UPDATE inventory SET quantity = quantity - ? WHERE item_id = ? AND facility_id IS NULL',
-        [item.approved_quantity, item.item_id]
+        'UPDATE inventory SET quantity = quantity - ? WHERE id = ? AND facility_id IS NULL',
+        [approvedQty, item.item_id]
       );
     }
 
@@ -442,7 +532,7 @@ const approveRequisition = async (req, res) => {
     await connection.execute(
       `INSERT INTO dispatches (requisition_id, facility_id, status, dispatched_by, created_at) 
        VALUES (?, ?, 'in_transit', ?, NOW())`,
-      [id, requisitions[0].facility_id, req.user.id]
+      [id, requisitions[0].facility_id ?? null, userId]
     );
 
     await connection.commit();
