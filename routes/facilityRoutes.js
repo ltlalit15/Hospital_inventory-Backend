@@ -7,7 +7,8 @@ const {
   createFacility,
   updateFacility,
   deleteFacility,
-  getFacilityStats
+  getFacilityStats,
+  assignFacilityAdmin
 } = require('../controllers/facilityController');
 
 const router = express.Router();
@@ -30,6 +31,8 @@ router.post('/',  validate(facilitySchemas.create), createFacility);
 
 // router.put('/:id', authorize('super_admin'), validate(facilitySchemas.update), updateFacility);
 router.put('/:id', validate(facilitySchemas.update), updateFacility);
+
+router.put('/:facility_id/assign-admin', assignFacilityAdmin);
 
 
 // Delete facility
