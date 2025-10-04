@@ -4,7 +4,8 @@ const {
   getSuperAdminDashboard,
   getWarehouseAdminDashboard,
   getFacilityAdminDashboard,
-  getFacilityUserDashboard
+  getFacilityUserDashboard,
+  getFacilityUserDashboardUserId
 } = require('../controllers/dashboardController');
 
 const router = express.Router();
@@ -34,7 +35,8 @@ const router = express.Router();
 router.get('/getSuperAdminDashboard', getSuperAdminDashboard);
 router.get('/getWarehouseAdminDashboard', getWarehouseAdminDashboard);
 router.get('/getFacilityAdminDashboard', getFacilityAdminDashboard);
-router.get('/getFacilityUserDashboard', getFacilityUserDashboard);
+router.get('/getFacilityUserDashboard',authenticateToken, getFacilityUserDashboard);
+router.get('/getFacilityUserDashboardUser',authenticateToken, getFacilityUserDashboardUserId)
 
 
 

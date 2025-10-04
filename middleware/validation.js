@@ -32,7 +32,7 @@ const userSchemas = {
     }),
     facility_admin_id: Joi.any(),
     phone: Joi.any().optional(),
-    department: Joi.number().optional(),
+    department: Joi.string().optional(),
   }),
 
   login: Joi.object({

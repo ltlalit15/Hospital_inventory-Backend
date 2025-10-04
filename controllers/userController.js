@@ -240,19 +240,19 @@ const createUser = async (req, res) => {
     );
 
     // Get created user
-    const [users] = await pool.execute(
-      `SELECT u.id, u.name, u.email, u.role, u.facility_id, u.facility_admin_id, u.phone, u.department, u.status, u.created_at,
-              f.name as facility_name
-       FROM users u
-       LEFT JOIN facilities f ON u.facility_id = f.id
-       WHERE u.id = ?`,
-      [result.insertId]
-    );
+    // const [users] = await pool.execute(
+    //   `SELECT u.id, u.name, u.email, u.role, u.facility_id, u.facility_admin_id, u.phone, u.department, u.status, u.created_at,
+    //           f.name as facility_name
+    //    FROM users u
+    //    LEFT JOIN facilities f ON u.facility_id = f.id
+    //    WHERE u.id = ?`,
+    //   [result.insertId]
+    // );
 
     res.status(201).json({
       success: true,
       message: 'User created successfully',
-      data: users[0]
+      // data: users[0]
     });
   } catch (error) {
     console.error('Create user error:', error);

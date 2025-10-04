@@ -22,6 +22,7 @@ router.get('/', getFacilities);
 // Get facility by ID
 router.get('/:id', getFacilityById);
 
+
 // Get facility statistics
 router.get('/:id/stats', getFacilityStats);
 

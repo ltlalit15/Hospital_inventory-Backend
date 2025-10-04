@@ -151,7 +151,8 @@ const getRequisitions = async (req, res) => {
       `SELECT r.*, 
               u.name AS user_name, 
               u.email AS user_email, 
-              f.name AS facility_name, 
+              f.name AS facility_name,
+              f.status AS facility_status, 
               f.location AS facility_location
        FROM requisitions r
        LEFT JOIN users u ON r.user_id = u.id

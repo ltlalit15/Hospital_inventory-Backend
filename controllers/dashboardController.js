@@ -336,9 +336,42 @@ const getFacilityUserDashboard = async (req, res) => {
   }
 };
 
+const getFacilityUserDashboardUserId = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const facilityId = req.user.facility_id;
+
+    const [stats] = await pool.execute(`
+      SELECT 
+        (SELECT COUNT(*) FROM requisitions WHERE user_id = ?) as my_total_requests,
+        (SELECT COUNT(*) FROM requisitions WHERE user_id = ? AND status = 'approved') as my_approved_requests,
+        (SELECT COUNT(*) FROM requisitions WHERE user_id = ? AND status = 'dispatched') as my_dispatched_requests,
+        (SELECT COUNT(*) FROM requisitions WHERE user_id = ? AND status = 'rejected') as my_rejected_requests,
+        (SELECT COUNT(*) FROM requisitions WHERE user_id = ? AND DATE(created_at) = CURDATE()) as my_today_requests,
+        (SELECT COUNT(*) FROM inventory WHERE facility_id = ?) as available_items
+    `, [userId, userId, userId, userId, userId, facilityId]);
+
+    res.json({
+      success: true,
+      data: {
+        stats: stats[0]
+      }
+    });
+  } catch (error) {
+    console.error('Facility user dashboard error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to load dashboard data',
+      error: error.message
+    });
+  }
+};
+
+
 module.exports = {
   getSuperAdminDashboard,
   getWarehouseAdminDashboard,
   getFacilityAdminDashboard,
-  getFacilityUserDashboard
+  getFacilityUserDashboard,
+  getFacilityUserDashboardUserId
 };

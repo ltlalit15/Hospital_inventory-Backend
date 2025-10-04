@@ -114,6 +114,94 @@ const getInventoryById = async (req, res) => {
   }
 };
 
+
+const getInventoryByFacilityId = async (req, res) => {
+  try {
+    const { id } = req.params; // facility_id aayega yahan
+
+    let query = `
+      SELECT i.*, f.name as facility_name, f.location as facility_location,
+      f.admin_user_id AS facility_admin_user_id,
+             CASE WHEN i.quantity <= i.reorder_level THEN 1 ELSE 0 END as is_low_stock
+      FROM inventory i
+      LEFT JOIN facilities f ON i.facility_id = f.id
+      WHERE i.facility_id = ?
+    `;
+
+    const queryParams = [id];
+
+    // Role-based access control
+    // if (req.user.role === 'facility_admin' || req.user.role === 'facility_user') {
+    //   query += ' AND i.facility_id = ?';
+    //   queryParams.push(req.user.facility_id);
+    // }
+
+    const [items] = await pool.execute(query, queryParams);
+
+    if (items.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'No inventory items found for this facility'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: items
+    });
+  } catch (error) {
+    console.error('Get inventory by facility ID error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get inventory items',
+      error: error.message
+    });
+  }
+};
+
+
+const getInventoryByAdminUserId = async (req, res) => {
+  try {
+    const { id } = req.params; // yahan ab admin_user_id aayega
+
+    let query = `
+      SELECT i.*, 
+             f.name as facility_name, 
+             f.location as facility_location,
+             f.admin_user_id AS facility_admin_user_id,
+             CASE WHEN i.quantity <= i.reorder_level THEN 1 ELSE 0 END as is_low_stock
+      FROM inventory i
+      LEFT JOIN facilities f ON i.facility_id = f.id
+      WHERE f.admin_user_id = ?
+    `;
+
+    const queryParams = [id];
+
+    const [items] = await pool.execute(query, queryParams);
+
+    if (items.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'No inventory items found for this admin user'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: items
+    });
+  } catch (error) {
+    console.error('Get inventory by admin user ID error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get inventory items',
+      error: error.message
+    });
+  }
+};
+
+
+
 // Create inventory item
 const createInventoryItem = async (req, res) => {
   try {
@@ -483,5 +571,7 @@ module.exports = {
   updateStock,
   deleteInventoryItem,
   getStockMovements,
-  getCategories
+  getCategories,
+  getInventoryByFacilityId,
+  getInventoryByAdminUserId
 };

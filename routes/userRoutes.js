@@ -32,7 +32,7 @@ router.get('/:id', getUserById);
 router.post('/', validate(userSchemas.register), createUser);
 
 // Update user
-router.put('/:id', validate(userSchemas.update), updateUser);
+router.put('/:id', updateUser);
 
 // Delete user
 router.delete('/:id', deleteUser);

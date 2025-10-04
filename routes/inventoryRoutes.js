@@ -9,7 +9,9 @@ const {
   updateStock,
   deleteInventoryItem,
   getStockMovements,
-  getCategories
+  getCategories,
+  getInventoryByFacilityId,
+  getInventoryByAdminUserId
 } = require('../controllers/inventoryController');
 
 const router = express.Router();
@@ -25,6 +27,11 @@ router.get('/', getInventory);
 
 // Get inventory item by ID
 router.get('/:id', getInventoryById);
+
+
+router.get("/fasilities/:id", getInventoryByFacilityId);
+
+router.get("/adminId/:id", getInventoryByAdminUserId);
 
 // Get stock movements for an item
 router.get('/:id/movements', getStockMovements);
