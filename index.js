@@ -38,7 +38,7 @@ app.use(helmet());
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5173',
-  'https://hospital-inventory-management.netlify.app',
+  'https://hospitalmanagament.netlify.app',
   'https://yourdomain.com'
 ];
 
