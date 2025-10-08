@@ -39,7 +39,7 @@ const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5173',
   'https://hospitalmanagament.netlify.app',
-  'https://yourdomain.com'
+  'https://resonant-kangaroo-a7cd11.netlify.app'
 ];
 
 app.use(cors({
