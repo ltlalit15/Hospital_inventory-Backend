@@ -39,7 +39,8 @@ const allowedOrigins = [
   'https://steady-griffin-4040a6.netlify.app',
   'http://localhost:5173',
   'https://hospitalmanagament.netlify.app',
-  'https://resonant-kangaroo-a7cd11.netlify.app'
+  'https://resonant-kangaroo-a7cd11.netlify.app',
+  'https://hospital-inventory2.netlify.app/'
 ];
 
 app.use(cors({
